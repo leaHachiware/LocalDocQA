@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>LocalDocQA</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
+      line-height: 1.8;
+    }
+    .answer-box {
+      font-size: 16px;
+      line-height: 1.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>欢迎使用 LocalDocQA</h1>
+
+    <form method="POST" enctype="multipart/form-data">
+      <div class="upload-section">
+        <label for="file">上传文档：</label>
+        <input type="file" name="file" id="file" onchange="showFileName()">
+        <span id="file-name">{{ file_name or '未选择文件' }}</span>
+        <button type="submit" name="action" value="upload">上传并解析</button>
+      </div>
+
+      <div class="question-section">
+        <label for="question">输入你的问题：</label>
+        <input type="text" name="question" id="question" placeholder="请输入问题...">
+        <button type="submit" name="action" value="ask" id="submit-btn">提交问题</button>
+      </div>
+    </form>
+
+    <div class="answer-box" id="answer-box">
+      {% if answer %}
+        <strong>AI 回答：</strong><br>
+        {{ answer }}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 📁 文件名展示 -->
+  <script>
+  function showFileName() {
+    const input = document.getElementById('file');
+    const fileNameDisplay = document.getElementById('file-name');
+    if (input.files.length > 0) {
+      fileNameDisplay.textContent = '当前上传：' + input.files[0].name;
+    } else {
+      fileNameDisplay.textContent = '未选择文件';
+    }
+  }
+  </script>
+
+  <!-- 🧠 回车提交 + 显示 loading 动画 -->
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("question");
+    const submitBtn = document.getElementById("submit-btn");
+    const answerBox = document.getElementById("answer-box");
+
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitBtn.click();
+      }
+    });
+
+    submitBtn.addEventListener("click", function () {
+      answerBox.innerHTML = "🤖 AI 正在思考中...";
+    });
+  });
+  </script>
+</body>
+</html>
