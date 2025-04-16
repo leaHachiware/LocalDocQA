@@ -1,0 +1,59 @@
+import os
+import pickle
+import faiss
+from flask import Blueprint, render_template, request
+from utils.doc_parser import extract_text_from_pdf
+from utils.langchain_embedder import build_faiss_with_langchain
+from utils.glm_infer import get_answer_from_spark  # 注意提前加载
+
+main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/', methods=['GET', 'POST'])
+def home():
+    extracted_text = ""
+    answer = ""
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        # ===== 文件上传部分 =====
+        if action == 'upload':
+            file = request.files['file']
+            if file.filename.endswith('.pdf'):
+                file_name = file.filename
+                filepath = os.path.join('docs', file.filename)
+                file.save(filepath)
+
+                extracted_text = extract_text_from_pdf(filepath)
+
+                # ✅ 使用 LangChain 构建 FAISS 向量库
+                build_faiss_with_langchain(extracted_text)
+
+
+        # ===== 问题提问部分 =====
+        elif action == 'ask':
+            question = request.form.get('question')
+            if question:
+                # 1. LangChain 检索相关文本块
+                from utils.langchain_embedder import retrieve_similar_chunks
+                retrieved_chunks = retrieve_similar_chunks(question, k=3)
+
+                # 2. 构建 prompt
+                context = "\n".join(retrieved_chunks)
+                prompt = f"""你是一位文档问答助手，请根据以下内容回答用户的问题。
+
+        文档内容：
+        {context}
+
+        用户问题：
+        {question}
+
+        请尽量准确、简洁地回答。
+        """
+
+                # 3. 调用讯飞星火生成回答
+                from utils.glm_infer import get_answer_from_spark
+                answer = get_answer_from_spark(prompt)
+
+    return render_template("index.html", extracted_text=extracted_text, answer=answer, file_name=file_name)
+
